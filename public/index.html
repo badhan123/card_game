@@ -1,0 +1,302 @@
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sixteen Card Game</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        .player { margin: 20px; }
+        .card {
+            display: inline-block; 
+            width: 60px; 
+            height: 90px; 
+            margin: 5px; 
+            background: lightblue; 
+            border: 1px solid black; 
+            cursor: pointer;
+            transition: background-color 0.3s, border 0.3s;
+        }
+        .selected {
+            background-color: yellow; /* Highlight selected cards */
+            border: 3px solid red;
+        }
+        .controls { margin-top: 20px; }
+        img { width: 100%; height: 100%; }
+        #error { color: red; margin: 10px; }
+        #game-over { font-size: 24px; color: green; margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Sixteen Card Game</h1>
+    <p>Developed by Badhan</p>
+    <div id="error"></div>
+    <div id="game"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        let playerName = prompt("Enter your name");
+        socket.emit('joinGame', playerName);
+
+        socket.on('gameJoined', ({ playerName }) => {
+            console.log(`Welcome, ${playerName}`);
+        });
+
+        socket.on('gameUpdate', (gameState) => {
+            renderGame(gameState);
+        });
+
+        socket.on('error', (message) => {
+            document.getElementById('error').innerText = message; // Show error message
+        });
+
+        socket.on('winner', (message) => {
+            document.getElementById('game-over').innerText = `Winner: ${message}`; // Display winner
+        });
+
+        socket.on('loser', (message) => {
+            document.getElementById('game-over').innerText = `Loser: ${message}`; // Display loser
+        });
+
+        socket.on('gameOver', (gameState) => {
+            document.getElementById('game-over').innerText = 'Game Over!';
+            renderGame(gameState); // Display final game state and player scores
+        });
+
+        function renderGame(gameState) {
+            const gameDiv = document.getElementById('game');
+            gameDiv.innerHTML = '';
+
+            if (gameState.gameOver) {
+                gameDiv.innerHTML = `<h2>Game Over!</h2>`;
+                gameState.players.forEach(player => {
+                    gameDiv.innerHTML += `<h3>${player.name}: ${player.score} points</h3>`;
+                });
+                return;
+            }
+
+            gameState.players.forEach((player, index) => {
+                const playerDiv = document.createElement('div');
+                playerDiv.className = 'player';
+                playerDiv.innerHTML = `
+                    <h3>${player.name} ${index === gameState.currentPlayer ? "(Your Turn)" : ""} - Score: ${player.score}</h3>
+                    <div class="hand" id="hand-${index}">
+                        ${player.hand.map((card, cardIndex) => `
+                            <div class="card ${gameState.selectedCards.some(selectedCard => 
+                                selectedCard.value === card.value && selectedCard.suit === card.suit) ? 'selected' : ''}" 
+                                onclick="selectCard(${index}, ${cardIndex})">
+                                <img src="/card_images/${card.value}_of_${card.suit}.png" alt="${card.value} of ${card.suit}">
+                            </div>
+                        `).join('')}
+                    </div>
+                    ${index === gameState.currentPlayer ? `
+                        <div class="controls">
+                            <button onclick="pickCard(${index}, true)">Pick from Discard Pile</button>
+                            <button onclick="pickCard(${index}, false)">Pick from Deck</button>
+                            <button onclick="callShow(${index})">Call Show</button>
+                        </div>
+                    ` : ''}
+                `;
+                gameDiv.appendChild(playerDiv);
+            });
+
+            const discardDiv = document.createElement('div');
+            discardDiv.className = 'controls';
+            discardDiv.innerHTML = `
+                <h3>Discard Pile</h3>
+                <div>${gameState.currentDiscard.length > 0 ? 
+                    gameState.currentDiscard.map(card => `
+                        <div class="card">
+                            <img src="/card_images/${card.value}_of_${card.suit}.png" alt="${card.value} of ${card.suit}">
+                        </div>
+                    `).join('') : "Empty"}</div>
+            `;
+            gameDiv.appendChild(discardDiv);
+        }
+
+        function selectCard(playerIndex, cardIndex) {
+            socket.emit('selectCard', playerIndex, cardIndex);
+        }
+
+        function pickCard(playerIndex, fromDiscardPile) {
+            socket.emit('pickCard', playerIndex, fromDiscardPile);
+        }
+
+        function callShow(playerIndex) {
+            socket.emit('callShow', playerIndex);
+        }
+    </script>
+</body>
+</html> -->
+
+
+
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sixteen Card Game</title>
+    <style>
+        body { font-family: Arial, sans-serif; text-align: center; }
+        .player { margin: 20px; }
+        .card {
+            display: inline-block; 
+            width: 60px; 
+            height: 90px; 
+            margin: 5px; 
+            background: lightblue; 
+            border: 1px solid black; 
+            cursor: pointer;
+            transition: background-color 0.3s, border 0.3s;
+        }
+        .selected {
+            background-color: yellow; /* Highlight selected cards */
+            border: 3px solid red;
+        }
+        .controls { margin-top: 20px; }
+        img { width: 100%; height: 100%; }
+    </style>
+</head>
+<body>
+    <h1>Sixteen Card Game</h1>
+    <h3>Developed by Badhan</h3>
+    
+    <div id="max-players-div">
+        <h3>Set Max Players (2 - 6):</h3>
+        <button onclick="setMaxPlayers(2)">2</button>
+        <button onclick="setMaxPlayers(3)">3</button>
+        <button onclick="setMaxPlayers(4)">4</button>
+        <button onclick="setMaxPlayers(5)">5</button>
+        <button onclick="setMaxPlayers(6)">6</button>
+    </div>
+
+    <div id="name-input" style="display: none;">
+        <h3>Please enter your name:</h3>
+        <input type="text" id="playerName" placeholder="Enter your name" />
+        <button onclick="submitName()">Submit</button>
+    </div>
+
+    <div id="game"></div>
+
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+        let playerName = '';
+        let maxPlayersSet = false;
+
+        // Show the player name input once max players are set
+        function setMaxPlayers(max) {
+            if (maxPlayersSet) {
+                return; // Do nothing if max players already set
+            }
+
+            socket.emit('setMaxPlayers', max);
+            maxPlayersSet = true;
+
+            // Hide the max players div and show the name input
+            document.getElementById("max-players-div").style.display = "none";
+            document.getElementById("name-input").style.display = "block";
+        }
+
+        // Submit player name
+        function submitName() {
+            playerName = document.getElementById('playerName').value;
+            if (!playerName.trim()) {
+                alert("Name cannot be empty!");
+                return;
+            }
+            
+            socket.emit('joinGame', playerName);
+
+            // Hide the name input once submitted
+            document.getElementById("name-input").style.display = "none";
+        }
+
+        socket.on('gameJoined', ({ playerName }) => {
+            console.log(`Welcome, ${playerName}`);
+        });
+
+        socket.on('gameUpdate', (gameState) => {
+            renderGame(gameState);
+        });
+
+        socket.on('error', (message) => alert(message));
+        socket.on('winner', (message) => alert(`Winner: ${message}`));
+        socket.on('loser', (message) => alert(`Loser: ${message}`));
+        socket.on('gameOver', (gameState) => {
+            alert('Game Over!');
+            renderGame(gameState);
+        });
+
+        socket.on('maxPlayersSet', (message) => {
+            alert(message);
+        });
+
+        function renderGame(gameState) {
+            const gameDiv = document.getElementById('game');
+            gameDiv.innerHTML = '';
+
+            if (gameState.gameOver) {
+                gameDiv.innerHTML = `<h2>Game Over!</h2>`;
+                gameState.players.forEach(player => {
+                    gameDiv.innerHTML += `<h3>${player.name}: ${player.score} points</h3>`;
+                });
+                return;
+            }
+
+            gameState.players.forEach((player, index) => {
+                const playerDiv = document.createElement('div');
+                playerDiv.className = 'player';
+                playerDiv.innerHTML = `
+                    <h3>${player.name} ${index === gameState.currentPlayer ? "(Your Turn)" : ""} - Score: ${player.score}</h3>
+                    <div class="hand" id="hand-${index}">
+                        ${player.hand.map((card, cardIndex) => `
+                            <div class="card ${gameState.selectedCards.some(selectedCard => 
+                                selectedCard.value === card.value && selectedCard.suit === card.suit) ? 'selected' : ''}" 
+                                onclick="selectCard(${index}, ${cardIndex})">
+                                <img src="/card_images/${card.value}_of_${card.suit}.png" alt="${card.value} of ${card.suit}">
+                            </div>
+                        `).join('')}
+                    </div>
+                    ${index === gameState.currentPlayer ? `
+                        <div class="controls">
+                            <button onclick="pickCard(${index}, true)">Pick from Discard Pile</button>
+                            <button onclick="pickCard(${index}, false)">Pick from Deck</button>
+                            <button onclick="callShow(${index})">Call Show</button>
+                        </div>
+                    ` : ''}
+                `;
+                gameDiv.appendChild(playerDiv);
+            });
+
+            const discardDiv = document.createElement('div');
+            discardDiv.className = 'controls';
+            discardDiv.innerHTML = `
+                <h3>Discard Pile</h3>
+                <div>${gameState.currentDiscard.length > 0 ? 
+                    gameState.currentDiscard.map(card => `
+                        <div class="card">
+                            <img src="/card_images/${card.value}_of_${card.suit}.png" alt="${card.value} of ${card.suit}">
+                        </div>
+                    `).join('') : "Empty"}</div>
+            `;
+            gameDiv.appendChild(discardDiv);
+        }
+
+        function selectCard(playerIndex, cardIndex) {
+            socket.emit('selectCard', playerIndex, cardIndex);
+        }
+
+        function pickCard(playerIndex, fromDiscardPile) {
+            socket.emit('pickCard', playerIndex, fromDiscardPile);
+        }
+
+        function callShow(playerIndex) {
+            socket.emit('callShow', playerIndex);
+        }
+    </script>
+</body>
+</html> 
